@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+//using System.IO.Compression;
+using Ionic.Zip;
 
 namespace MsSqlDbBackup
 {
@@ -17,17 +19,19 @@ namespace MsSqlDbBackup
                 string instance = args[1];
                 string database = args[2];
                 string conString = $"Data Source ={instance}; Initial Catalog = {database};";
+                string dirPath = args[3];
                 if (isIntegratedSecurity == "1")
                 {
                     conString += $" Integrated Security = True;";
                 }
                 else
                 {
-                    string userName = args[3];
-                    string password = args[4];
+                    string userName = args[4];
+                    string password = args[5];
                     conString += $" Integrated Security = False; uid = {userName}; password = {password};";
                 }
-                string path = $@"C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\Backup\{database}_{DateTime.Now:yyyyMMdd}.bak";
+                string fileName = $"{database}_{DateTime.Now:yyyyMMdd}";
+                string bakPath = $@"{dirPath}\{fileName}.bak";
                 SqlConnection con = new SqlConnection(conString);
                 con.Open();
 
@@ -35,7 +39,7 @@ namespace MsSqlDbBackup
                 SqlCommand bu2 = new SqlCommand(sqlStmt2, con);
                 bu2.ExecuteNonQuery();
 
-                string sqlStmt3 = $"BACKUP DATABASE [{database}] TO DISK='{path}' WITH INIT;";
+                string sqlStmt3 = $"BACKUP DATABASE [{database}] TO DISK='{bakPath}' WITH INIT;";
                 SqlCommand bu3 = new SqlCommand(sqlStmt3, con);
                 bu3.ExecuteNonQuery();
 
@@ -45,6 +49,13 @@ namespace MsSqlDbBackup
 
                 //MessageBox.Show("database restoration done successefully");
                 con.Close();
+
+                using (var zip = new ZipFile())
+                {
+                    //    zip.Password = "P@ssW0rd";
+                    zip.AddFile(bakPath, "");
+                    zip.Save($@"{dirPath}\{fileName}.zip");
+                }
 
             }
             catch (Exception ex)
